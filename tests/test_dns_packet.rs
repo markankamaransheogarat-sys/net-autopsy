@@ -1,5 +1,5 @@
-use std::net::Ipv4Addr;
 use net_autopsy::dns::{DnsPacketBuilder, DnsPacketParser, QueryType};
+use std::net::Ipv4Addr;
 
 #[test]
 fn test_build_dns_query() {

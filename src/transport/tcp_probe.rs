@@ -42,7 +42,9 @@ impl TcpProber {
                 if kind == std::io::ErrorKind::ConnectionRefused {
                     TcpProbeResult {
                         target,
-                        status: TcpProbeStatus::Refused { latency_ms: elapsed },
+                        status: TcpProbeStatus::Refused {
+                            latency_ms: elapsed,
+                        },
                         is_reachable: false,
                         latency_ms: Some(elapsed),
                     }
@@ -55,14 +57,12 @@ impl TcpProber {
                     }
                 }
             }
-            Err(_) => {
-                TcpProbeResult {
-                    target,
-                    status: TcpProbeStatus::Blackholed { timeout_ms },
-                    is_reachable: false,
-                    latency_ms: None,
-                }
-            }
+            Err(_) => TcpProbeResult {
+                target,
+                status: TcpProbeStatus::Blackholed { timeout_ms },
+                is_reachable: false,
+                latency_ms: None,
+            },
         }
     }
 }

@@ -96,13 +96,11 @@ impl QuicProber {
                     }
                 }
             }
-            Err(_) => {
-                QuicProbeResult {
-                    target,
-                    status: QuicProbeStatus::SilentDrop { timeout_ms },
-                    is_quic_functional: false,
-                }
-            }
+            Err(_) => QuicProbeResult {
+                target,
+                status: QuicProbeStatus::SilentDrop { timeout_ms },
+                is_quic_functional: false,
+            },
         }
     }
 }

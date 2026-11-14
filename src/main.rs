@@ -1,5 +1,5 @@
-use std::env;
 use net_autopsy::{AutopsyEngine, ReportFormatter};
+use std::env;
 
 #[tokio::main]
 async fn main() {
@@ -28,7 +28,11 @@ async fn main() {
                 return;
             }
             d if !d.starts_with('-') => {
-                domain = d.trim_start_matches("https://").trim_start_matches("http://").trim_end_matches('/').to_string();
+                domain = d
+                    .trim_start_matches("https://")
+                    .trim_start_matches("http://")
+                    .trim_end_matches('/')
+                    .to_string();
             }
             _ => {}
         }

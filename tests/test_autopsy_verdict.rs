@@ -1,7 +1,9 @@
 use net_autopsy::dns::{DnsAnalysis, DnsProbeResult};
-use net_autopsy::engine::{AutopsyReport, PrimaryVerdict, ReportFormatter, RemediationRecommendation};
-use net_autopsy::tls::{TlsSniReport, SniOutcome};
-use net_autopsy::transport::{TcpProbeResult, TcpProbeStatus, QuicProbeResult, QuicProbeStatus};
+use net_autopsy::engine::{
+    AutopsyReport, PrimaryVerdict, RemediationRecommendation, ReportFormatter,
+};
+use net_autopsy::tls::{SniOutcome, TlsSniReport};
+use net_autopsy::transport::{QuicProbeResult, QuicProbeStatus, TcpProbeResult, TcpProbeStatus};
 
 #[test]
 fn test_report_formatting_and_json() {
@@ -58,7 +60,9 @@ fn test_report_formatting_and_json() {
         confidence_score: 0.98,
         recommendations: vec![RemediationRecommendation {
             title: "TCP Segmentation Bypass Viable".to_string(),
-            description: "Middlebox (TSPU/DPI) killed plain ClientHello, but passed segmented ClientHello!".to_string(),
+            description:
+                "Middlebox (TSPU/DPI) killed plain ClientHello, but passed segmented ClientHello!"
+                    .to_string(),
             tool_suggestion: Some("Enable TCP segmentation in ultradpi or zapret".to_string()),
         }],
     };

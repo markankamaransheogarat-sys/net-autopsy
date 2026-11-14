@@ -97,7 +97,12 @@ impl DnsPacketParser {
 
             let rtype = u16::from_be_bytes([bytes[offset], bytes[offset + 1]]);
             let _rclass = u16::from_be_bytes([bytes[offset + 2], bytes[offset + 3]]);
-            let _ttl = u32::from_be_bytes([bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]]);
+            let _ttl = u32::from_be_bytes([
+                bytes[offset + 4],
+                bytes[offset + 5],
+                bytes[offset + 6],
+                bytes[offset + 7],
+            ]);
             let rdlength = u16::from_be_bytes([bytes[offset + 8], bytes[offset + 9]]) as usize;
             offset += 10;
 

@@ -1,9 +1,9 @@
+use super::client_hello::TlsClientHelloBuilder;
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
-use super::client_hello::TlsClientHelloBuilder;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub enum SniOutcome {
@@ -47,8 +47,12 @@ impl SniProber {
         for (i, chunk) in payloads.iter().enumerate() {
             if let Err(e) = stream.write_all(chunk).await {
                 let elapsed = start.elapsed().as_millis() as u64;
-                if e.kind() == std::io::ErrorKind::ConnectionReset || e.kind() == std::io::ErrorKind::BrokenPipe {
-                    return SniOutcome::RstInjected { elapsed_ms: elapsed };
+                if e.kind() == std::io::ErrorKind::ConnectionReset
+                    || e.kind() == std::io::ErrorKind::BrokenPipe
+                {
+                    return SniOutcome::RstInjected {
+                        elapsed_ms: elapsed,
+                    };
                 }
                 return SniOutcome::ConnectionFailed(e.to_string());
             }
@@ -66,24 +70,37 @@ impl SniProber {
         match timeout(timeout_duration, stream.read(&mut response_buf)).await {
             Ok(Ok(0)) => {
                 let elapsed = start.elapsed().as_millis() as u64;
-                SniOutcome::RstInjected { elapsed_ms: elapsed }
+                SniOutcome::RstInjected {
+                    elapsed_ms: elapsed,
+                }
             }
             Ok(Ok(n)) => {
                 let elapsed = start.elapsed().as_millis() as u64;
                 let first_byte = response_buf[0];
                 match first_byte {
-                    0x16 => SniOutcome::ServerHelloReceived { latency_ms: elapsed },
+                    0x16 => SniOutcome::ServerHelloReceived {
+                        latency_ms: elapsed,
+                    },
                     0x15 => {
                         let alert_code = if n > 6 { response_buf[6] } else { 0 };
-                        SniOutcome::TlsAlertReceived { alert_code, latency_ms: elapsed }
+                        SniOutcome::TlsAlertReceived {
+                            alert_code,
+                            latency_ms: elapsed,
+                        }
                     }
-                    _ => SniOutcome::ServerHelloReceived { latency_ms: elapsed },
+                    _ => SniOutcome::ServerHelloReceived {
+                        latency_ms: elapsed,
+                    },
                 }
             }
             Ok(Err(e)) => {
                 let elapsed = start.elapsed().as_millis() as u64;
-                if e.kind() == std::io::ErrorKind::ConnectionReset || e.kind() == std::io::ErrorKind::BrokenPipe {
-                    SniOutcome::RstInjected { elapsed_ms: elapsed }
+                if e.kind() == std::io::ErrorKind::ConnectionReset
+                    || e.kind() == std::io::ErrorKind::BrokenPipe
+                {
+                    SniOutcome::RstInjected {
+                        elapsed_ms: elapsed,
+                    }
                 } else {
                     SniOutcome::ConnectionFailed(e.to_string())
                 }
@@ -107,7 +124,8 @@ impl SniProber {
 
         // 2. Neutral SNI (e.g. example.com) to the same IP
         let neutral_hello = TlsClientHelloBuilder::build("example.com");
-        let neutral_outcome = Self::send_and_await(target, &[&neutral_hello], None, timeout_dur).await;
+        let neutral_outcome =
+            Self::send_and_await(target, &[&neutral_hello], None, timeout_dur).await;
 
         // 3. Segmented Target SNI (Split at 5 bytes to separate TLS record header from SNI extension)
         let split_pos = 5.min(target_hello.len());
@@ -123,14 +141,23 @@ impl SniProber {
 
         // Analysis: Is SNI filtered?
         // If neutral SNI succeeds (ServerHello or Alert) while target SNI is dropped/reset
-        let target_failed = matches!(plain_outcome, SniOutcome::RstInjected { .. } | SniOutcome::SilentDrop { .. });
-        let neutral_succeeded = matches!(neutral_outcome, SniOutcome::ServerHelloReceived { .. } | SniOutcome::TlsAlertReceived { .. });
+        let target_failed = matches!(
+            plain_outcome,
+            SniOutcome::RstInjected { .. } | SniOutcome::SilentDrop { .. }
+        );
+        let neutral_succeeded = matches!(
+            neutral_outcome,
+            SniOutcome::ServerHelloReceived { .. } | SniOutcome::TlsAlertReceived { .. }
+        );
 
         let is_sni_filtered = target_failed && neutral_succeeded;
 
         // Is segmentation effective?
         // If plain target failed, but segmented succeeded
-        let segmented_succeeded = matches!(segmented_outcome, SniOutcome::ServerHelloReceived { .. } | SniOutcome::TlsAlertReceived { .. });
+        let segmented_succeeded = matches!(
+            segmented_outcome,
+            SniOutcome::ServerHelloReceived { .. } | SniOutcome::TlsAlertReceived { .. }
+        );
         let is_segmentation_bypass_effective = target_failed && segmented_succeeded;
 
         TlsSniReport {

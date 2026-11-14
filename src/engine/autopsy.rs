@@ -1,8 +1,8 @@
+use crate::dns::{DnsAnalysis, DnsResolver};
+use crate::tls::{SniOutcome, SniProber, TlsSniReport};
+use crate::transport::{QuicProbeResult, QuicProber, TcpProbeResult, TcpProber};
 use std::net::SocketAddr;
 use std::time::Duration;
-use crate::dns::{DnsResolver, DnsAnalysis};
-use crate::transport::{TcpProber, TcpProbeResult, QuicProber, QuicProbeResult};
-use crate::tls::{SniProber, TlsSniReport, SniOutcome};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub enum PrimaryVerdict {
@@ -146,7 +146,8 @@ impl AutopsyEngine {
             confidence = 0.85;
             recommendations.push(RemediationRecommendation {
                 title: "Unable to Resolve Target Host".to_string(),
-                description: "Neither local nor trusted DNS returned valid IP addresses.".to_string(),
+                description: "Neither local nor trusted DNS returned valid IP addresses."
+                    .to_string(),
                 tool_suggestion: None,
             });
         }

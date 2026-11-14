@@ -1,8 +1,8 @@
+use super::dns_packet::{DnsPacketBuilder, DnsPacketParser, DnsResponse, QueryType};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::{Duration, Instant};
 use tokio::net::UdpSocket;
 use tokio::time::timeout;
-use super::dns_packet::{DnsPacketBuilder, DnsPacketParser, DnsResponse, QueryType};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct DnsProbeResult {
@@ -52,12 +52,17 @@ impl DnsResolver {
         let mut buf = [0u8; 1024];
         let (len, _) = timeout(timeout_duration, socket.recv_from(&mut buf))
             .await
-            .map_err(|_| format!("DNS query to {server_addr} timed out after {:?}", timeout_duration))?
+            .map_err(|_| {
+                format!(
+                    "DNS query to {server_addr} timed out after {:?}",
+                    timeout_duration
+                )
+            })?
             .map_err(|e| format!("Failed to receive DNS response: {e}"))?;
 
         let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
-        let response = DnsPacketParser::parse(&buf[..len])
-            .map_err(|e| format!("DNS parse error: {e}"))?;
+        let response =
+            DnsPacketParser::parse(&buf[..len]).map_err(|e| format!("DNS parse error: {e}"))?;
 
         Ok((response, elapsed_ms))
     }
@@ -88,8 +93,10 @@ impl DnsResolver {
 
         // Run A and HTTPS queries concurrently
         let sys_res = Self::query_server(domain, system_server, QueryType::A, timeout_dur).await;
-        let trusted_res = Self::query_server(domain, trusted_server, QueryType::A, timeout_dur).await;
-        let trusted_https = Self::query_server(domain, trusted_server, QueryType::HTTPS, timeout_dur).await;
+        let trusted_res =
+            Self::query_server(domain, trusted_server, QueryType::A, timeout_dur).await;
+        let trusted_https =
+            Self::query_server(domain, trusted_server, QueryType::HTTPS, timeout_dur).await;
 
         let sys_probe = match sys_res {
             Ok((resp, lat)) => DnsProbeResult {
@@ -114,8 +121,14 @@ impl DnsResolver {
 
         let trusted_probe = match trusted_res {
             Ok((resp, lat)) => {
-                let has_ech = trusted_https.as_ref().map(|(h, _)| h.has_ech).unwrap_or(false);
-                let has_https = trusted_https.as_ref().map(|(h, _)| h.has_https_rr).unwrap_or(false);
+                let has_ech = trusted_https
+                    .as_ref()
+                    .map(|(h, _)| h.has_ech)
+                    .unwrap_or(false);
+                let has_https = trusted_https
+                    .as_ref()
+                    .map(|(h, _)| h.has_https_rr)
+                    .unwrap_or(false);
                 DnsProbeResult {
                     server: trusted_server.to_string(),
                     latency_ms: lat,
@@ -148,21 +161,31 @@ impl DnsResolver {
             if let Ok(ip) = ip_str.parse::<Ipv4Addr>() {
                 if ip.is_loopback() || ip.is_unspecified() || ip.is_private() {
                     is_poisoned = true;
-                    reason = Some(format!("System DNS returned bogus/private IP: {ip} (ISP redirection stub)"));
+                    reason = Some(format!(
+                        "System DNS returned bogus/private IP: {ip} (ISP redirection stub)"
+                    ));
                 }
             }
         }
 
         // 2. NXDOMAIN Hijack: System DNS says non-existent, but Trusted DNS finds IPs
-        if !trusted_probe.ipv4_records.is_empty() && (sys_probe.rcode == 3 || sys_probe.ipv4_records.is_empty()) {
+        if !trusted_probe.ipv4_records.is_empty()
+            && (sys_probe.rcode == 3 || sys_probe.ipv4_records.is_empty())
+        {
             is_nxdomain_hijacked = true;
             is_poisoned = true;
-            reason = Some("System DNS returned NXDOMAIN / Empty set while Trusted DNS resolved valid IPs".to_string());
+            reason = Some(
+                "System DNS returned NXDOMAIN / Empty set while Trusted DNS resolved valid IPs"
+                    .to_string(),
+            );
         }
 
         // 3. IP Set Discrepancy (neither set intersects and trusted has valid records)
         if !trusted_probe.ipv4_records.is_empty() && !sys_probe.ipv4_records.is_empty() {
-            let has_intersection = sys_probe.ipv4_records.iter().any(|ip| trusted_probe.ipv4_records.contains(ip));
+            let has_intersection = sys_probe
+                .ipv4_records
+                .iter()
+                .any(|ip| trusted_probe.ipv4_records.contains(ip));
             if !has_intersection && !is_poisoned {
                 // If it's a known ISP block IP
                 let first_sys_ip = &sys_probe.ipv4_records[0];

@@ -22,5 +22,8 @@ fn test_tls_client_hello_structure() {
 
     // Verify supported versions extension (0x002B) is present
     let has_sup_versions = packet.windows(2).any(|w| w == [0x00, 0x2B]);
-    assert!(has_sup_versions, "ClientHello must contain supported_versions extension");
+    assert!(
+        has_sup_versions,
+        "ClientHello must contain supported_versions extension"
+    );
 }
